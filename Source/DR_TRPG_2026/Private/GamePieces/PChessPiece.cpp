@@ -69,11 +69,12 @@ TArray<FIntPoint> APChessPiece::GetValidMoves(const TMap<FIntPoint, APChessPiece
 	{
 		// Player pieces advance toward +Y, enemy pieces advance toward -Y.
 		const int32 Direction = bIsPlayerTeam ? 1 : -1;
- 
+		const TArray<FIntPoint> Offsets = { {0,1}, {0,0}};
 		const FIntPoint Forward(GridPosition.X, GridPosition.Y + Direction);
 		if (Forward.Y >= 0 && Forward.Y < BoardHeight && !OccupiedSquares.Contains(Forward))
 		{
-			ValidMoves.Add(Forward);
+			AddPawnTwoMoves(ValidMoves, Offsets, OccupiedSquares, BoardWidth, BoardHeight);
+			//ValidMoves.Add(Forward);
 		}
  
 		for (int32 XOffset : { -1, 1 })
@@ -195,6 +196,28 @@ void APChessPiece::AddStepMoves(TArray<FIntPoint>& OutMoves, const TArray<FIntPo
 			}
 		}
 		OutMoves.Add(Target);
+	}
+}
+
+void APChessPiece::AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIntPoint>& Directions,
+	const TMap<FIntPoint, APChessPiece*>& OccupiedSquares, int32 BoardWidth, int32 BoardHeight) const
+{
+	for (const FIntPoint& Direction : Directions)
+	{
+		FIntPoint Current = GridPosition + Direction;
+		while (Current.X >= 0 && Current.X < BoardWidth && Current.Y >= 0 && Current.Y < BoardHeight)
+		{
+			if (APChessPiece* const* Occupant = OccupiedSquares.Find(Current))
+			{
+				if (IsValid(*Occupant) && (*Occupant)->bIsPlayerTeam != bIsPlayerTeam)
+				{
+					OutMoves.Add(Current); // Can capture here, but the slide stops.
+				}
+				break;
+			}
+			OutMoves.Add(Current);
+			Current += Direction;
+		}
 	}
 }
 

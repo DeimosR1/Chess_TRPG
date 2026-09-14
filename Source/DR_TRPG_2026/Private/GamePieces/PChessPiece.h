@@ -108,6 +108,9 @@ private:
 	// Single-step helper shared by Knight/King.
 	UFUNCTION(BlueprintCallable, Category="Movement")
 	void AddStepMoves(TArray<FIntPoint>& OutMoves, const TArray<FIntPoint>& Offsets, const TMap<FIntPoint, APChessPiece*>& OccupiedSquares, int32 BoardWidth, int32 BoardHeight) const;
+	// Specific Mover for the Pawn so they can only move two squares infront in normal movement
+	UFUNCTION(BlueprintCallable, Category="Movement")
+	void AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIntPoint>& Directions, const TMap<FIntPoint, APChessPiece*>& OccupiedSquares, int32 BoardWidth, int32 BoardHeight) const;
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Movement")

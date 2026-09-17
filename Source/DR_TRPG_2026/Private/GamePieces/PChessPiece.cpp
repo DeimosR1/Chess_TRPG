@@ -205,6 +205,7 @@ void APChessPiece::AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIn
 	for (const FIntPoint& Direction : Directions)
 	{
 		FIntPoint Current = GridPosition + Direction;
+		int32 gridCount = 0;
 		while (Current.X >= 0 && Current.X < BoardWidth && Current.Y >= 0 && Current.Y < BoardHeight)
 		{
 			if (APChessPiece* const* Occupant = OccupiedSquares.Find(Current))
@@ -215,8 +216,14 @@ void APChessPiece::AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIn
 				}
 				break;
 			}
+			
+			if (gridCount >= 2)
+			{
+				break;
+			}
 			OutMoves.Add(Current);
 			Current += Direction;
+			gridCount++;
 		}
 	}
 }

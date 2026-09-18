@@ -117,4 +117,8 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category="Board Generation")
 	TObjectPtr<UInstancedStaticMeshComponent> ProceduralTileDark;
+	
+	//These are to try and smoothout the piece movement
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	float DeltaTickSpeed = 0.0f;
 };

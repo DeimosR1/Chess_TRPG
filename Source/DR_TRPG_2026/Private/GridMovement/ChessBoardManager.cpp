@@ -50,6 +50,7 @@ void AChessBoardManager::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 void AChessBoardManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	DeltaTickSpeed = DeltaTime;
 
 }
 
@@ -158,6 +159,12 @@ bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord)
 	OccupiedSquares.Add(TargetCoord, SelectedPiece);
  
 	SelectedPiece->SetGridPosition(TargetCoord);
+	
+	//while (SelectedPiece->GetActorLocation() != GridToWorld(TargetCoord))
+	//{
+	//	SelectedPiece->AddMovementInput(GridToWorld(TargetCoord));
+	//}
+	
 	SelectedPiece->SetActorLocation(GridToWorld(TargetCoord));
 	
 	SelectedPiece->ChangeHasMoved(true);

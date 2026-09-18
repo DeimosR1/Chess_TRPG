@@ -160,10 +160,7 @@ bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord)
  
 	SelectedPiece->SetGridPosition(TargetCoord);
 	
-	//while (SelectedPiece->GetActorLocation() != GridToWorld(TargetCoord))
-	//{
-	//	SelectedPiece->AddMovementInput(GridToWorld(TargetCoord));
-	//}
+	//Do a Lerp or a timeline to smoothout movement
 	
 	SelectedPiece->SetActorLocation(GridToWorld(TargetCoord));
 	

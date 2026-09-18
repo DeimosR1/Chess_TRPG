@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "InputCoreTypes.h"
 #include "PChessPiece.generated.h"
 
 class UFloatingPawnMovement;
@@ -36,7 +37,7 @@ enum class EChessPieceType : uint8
 };
 
 UCLASS()
-class APChessPiece : public APawn
+class APChessPiece : public AActor
 {
 	GENERATED_BODY()
 
@@ -51,9 +52,6 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// Which side this piece belongs to. Used to tell allies from enemies when generating moves.
 	UPROPERTY(EditAnywhere, Category="Stats")

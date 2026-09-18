@@ -9,6 +9,11 @@
 class APChessPiece;
 class AChessBoardManager;
 
+
+//Look into PlayerState or an ActorComponent for this
+//Player State is better cause it persists 
+//Research RPC
+
 UCLASS()
 class AMultiplayerRelayTower : public AActor
 {

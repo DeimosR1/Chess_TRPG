@@ -8,6 +8,7 @@
 #include "GridMovement/ChessBoardManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widget/OverheadHealthStatus.h"
+#include "InputCoreTypes.h"
 
 // Sets default values
 APChessPiece::APChessPiece()
@@ -53,12 +54,6 @@ void APChessPiece::Tick(float DeltaTime)
 
 }
 
-// Called to bind functionality to input
-void APChessPiece::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
 TArray<FIntPoint> APChessPiece::GetValidMoves(const TMap<FIntPoint, APChessPiece*>& OccupiedSquares, int32 BoardWidth, int32 BoardHeight) const
 {
 	TArray<FIntPoint> ValidMoves;
@@ -69,7 +64,7 @@ TArray<FIntPoint> APChessPiece::GetValidMoves(const TMap<FIntPoint, APChessPiece
 	{
 		// Player pieces advance toward +Y, enemy pieces advance toward -Y.
 		const int32 Direction = bIsPlayerTeam ? 1 : -1;
-		const TArray<FIntPoint> Offsets = { {0,1}, {0,0}};
+		const TArray<FIntPoint> Offsets = { {0,1}, {0,0},{0,-1}};
 		const FIntPoint Forward(GridPosition.X, GridPosition.Y + Direction);
 		if (Forward.Y >= 0 && Forward.Y < BoardHeight && !OccupiedSquares.Contains(Forward))
 		{
@@ -210,10 +205,6 @@ void APChessPiece::AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIn
 		{
 			if (APChessPiece* const* Occupant = OccupiedSquares.Find(Current))
 			{
-				if (IsValid(*Occupant) && (*Occupant)->bIsPlayerTeam != bIsPlayerTeam)
-				{
-					OutMoves.Add(Current); // Can capture here, but the slide stops.
-				}
 				break;
 			}
 			

@@ -6,9 +6,12 @@
 #include "GameFramework/Actor.h"
 #include "ChessBoardManager.generated.h"
 
+class AChessPlayerState;
 class AChessGameMode;
 class APChessPiece;
 class ABoardGridHighlight;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectedPieceChanged, APChessPiece*, NewSelectedPiece);
 
 UCLASS()
 class AChessBoardManager : public AActor
@@ -56,22 +59,37 @@ public:
 	void RegisterPiece(APChessPiece* Piece, const FIntPoint& GridCoord);
  
 	// Selects a piece, computes its legal moves, and spawns highlight tiles on them.
+	// For Multiplayer it asks for the Player State of the requesting Client.
 	UFUNCTION(BlueprintCallable, Category="Grid")
-	void SelectPiece(APChessPiece* Piece);
+	void SelectPiece(APChessPiece* Piece, AChessPlayerState* RequestingPlayerState);
  
 	UFUNCTION(BlueprintCallable, Category="Grid")
 	void ClearSelection();
  
 	// Moves the currently selected piece to TargetCoord if it's one of its legal moves.
 	// Returns true if the move happened.
+	// The Player state is to check if the one trying to move it is the current player.
 	UFUNCTION(BlueprintCallable, Category="Grid")
-	bool TryMoveSelectedPieceTo(const FIntPoint& TargetCoord);
+	bool TryMoveSelectedPieceTo(const FIntPoint& TargetCoord, AChessPlayerState* RequestingPlayerState);
  
 	UFUNCTION(BlueprintCallable, Category="Grid")
 	APChessPiece* GetPieceAt(const FIntPoint& GridCoord) const;
 	
 	UFUNCTION(BlueprintCallable, Category="Grid")
 	TArray<APChessPiece*> GetAllPiecesOnBoard();
+	
+	// For Smooth Movement
+	UFUNCTION()
+	void StartSmoothMove(APChessPiece* Piece, const FVector& TargetLocation);
+	
+	// For Piece Deselection
+	UFUNCTION(BlueprintCallable, Category="Grid")
+	void DeselectPiece(AChessPlayerState* RequestingPlayerState);
+	
+	//For UI
+	UPROPERTY(BlueprintAssignable, Category="Grid")
+	FOnSelectedPieceChanged OnSelectedPieceChanged;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
  
 private:
 	
@@ -82,7 +100,7 @@ private:
 	UPROPERTY()
 	TMap<FIntPoint, APChessPiece*> OccupiedSquares;
  
-	UPROPERTY()
+	UPROPERTY(ReplicatedUsing=OnRep_SelectedPiece)
 	TObjectPtr<APChessPiece> SelectedPiece;
  
 	UPROPERTY()
@@ -121,4 +139,34 @@ private:
 	//These are to try and smoothout the piece movement
 	UPROPERTY(EditDefaultsOnly, Category="Movement")
 	float DeltaTickSpeed = 0.0f;
+	
+	// How fast do the piece move? (In Seconds)
+	UPROPERTY(EditAnywhere, Category="Movement")
+	float MoveDuration = 0.3f;
+ 
+	// Boolean to check when a piece is being interpolated (moved) to a new square
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	bool bIsMovingPiece = false;
+ 
+	// We need to save the piece that is moving as selection is cleared when movement starts
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	TObjectPtr<APChessPiece> MovingPiece;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	FVector MoveStartLocation = FVector::ZeroVector;
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	FVector MoveTargetLocation = FVector::ZeroVector;
+	UPROPERTY(EditDefaultsOnly, Category="Movement")
+	float MoveElapsedTime = 0.0f;
+	
+	UFUNCTION()
+	void TickInterpolatePieceMovement(float DeltaTime); //To Add to tick so it is cleaner
+	
+	//For Multiplayer. This is to hold the current Player whose turn it is so the other player cannot interfere
+	UPROPERTY()
+	TObjectPtr<AChessPlayerState> CurrentSelectingPlayer;
+	
+	//For UI
+	UFUNCTION()
+	void OnRep_SelectedPiece();
 };

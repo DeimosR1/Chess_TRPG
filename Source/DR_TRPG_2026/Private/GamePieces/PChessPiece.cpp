@@ -4,11 +4,13 @@
 #include "GamePieces/PChessPiece.h"
 
 #include "Components/WidgetComponent.h"
-#include "GameFramework/FloatingPawnMovement.h"
 #include "GridMovement/ChessBoardManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widget/OverheadHealthStatus.h"
 #include "InputCoreTypes.h"
+#include "Multiplayer/ChessPlayerState.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/TPlayerController.h"
 
 // Sets default values
 APChessPiece::APChessPiece()
@@ -25,7 +27,8 @@ APChessPiece::APChessPiece()
 	OverheadWidgetComponent = CreateDefaultSubobject<UWidgetComponent>("Overhead Widget Component");
 	OverheadWidgetComponent->SetupAttachment(GetRootComponent());
 	
-	MovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("PawnFloating"));
+	bReplicates = true;
+	SetReplicatingMovement(false);
 	
 	DisableComponentsSimulatePhysics();
 
@@ -36,7 +39,7 @@ void APChessPiece::BeginPlay()
 {
 	Super::BeginPlay();
 	ChessBoardManager = Cast<AChessBoardManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AChessBoardManager::StaticClass()));
-	if (IsValid(ChessBoardManager))
+	if (IsValid(ChessBoardManager) && HasAuthority())
 	{
 		// Snap wherever this piece was placed in the level to the logical board grid
 		// and register it with the GridManager so it counts toward occupancy.
@@ -45,6 +48,7 @@ void APChessPiece::BeginPlay()
 	}
 	
 	ConfigureOverheadWidgetComponent();
+	ChangeActiveColor(false);
 }
 
 // Called every frame
@@ -52,6 +56,16 @@ void APChessPiece::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void APChessPiece::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APChessPiece, bIsPlayerTeam);
+	DOREPLIFETIME(APChessPiece, GridPosition);
+	DOREPLIFETIME(APChessPiece, bHasMoved);
+	DOREPLIFETIME(APChessPiece, UnitStats);
+	DOREPLIFETIME(APChessPiece, bChangeColor);
 }
 
 TArray<FIntPoint> APChessPiece::GetValidMoves(const TMap<FIntPoint, APChessPiece*>& OccupiedSquares, int32 BoardWidth, int32 BoardHeight) const
@@ -141,11 +155,15 @@ FVector APChessPiece::GetGridLocation(FVector Location)
 void APChessPiece::HandleClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed)
 {
 	//Gate of not moving if it moved already.
-	if (bHasMoved){ return; }
+	if (bHasMoved){ ChangeActiveColor(true); return; }
 	
-	if (IsValid(ChessBoardManager))
+	//Instead of directly calling the chessboard manager we now reroute it through the player controller
+	if (ATPlayerController* LocalPlayerController = Cast<ATPlayerController>(UGameplayStatics::GetPlayerController(this, 0)))
 	{
-		ChessBoardManager->SelectPiece(this);
+		if (AChessPlayerState* LocalPlayerState = LocalPlayerController->GetPlayerState<AChessPlayerState>())
+		{
+			LocalPlayerState->ServerSelectPiece(this);
+		}
 	}
 }
 
@@ -221,13 +239,13 @@ void APChessPiece::AddPawnTwoMoves(TArray<FIntPoint>& OutMoves, const TArray<FIn
 
 void APChessPiece::ReceiveDamage(int32 Attack)
 {
-	int32 NewHealth = GetCurrentHealth() - (Attack/(GetDefense()));
+	//This should only be in server
+	if (!HasAuthority()){ return; }
+	
+	const int32 Denominator = FMath::Max(1, Attack + GetDefense());
+	const int32 NewHealth = GetCurrentHealth() - (Attack * Attack / Denominator);
 	UnitStats.UnitCurrentHealth = FMath::Clamp(NewHealth, 0, GetMaxHealth());
-	UOverheadHealthStatus* OverheadStatusGauge = Cast<UOverheadHealthStatus>(OverheadWidgetComponent->GetUserWidgetObject());
-	if (OverheadStatusGauge)
-	{
-		OverheadStatusGauge->SetValueOfHealthBar(GetCurrentHealth(), GetMaxHealth());
-	}
+	UpdateHealthbar();
 }
 
 void APChessPiece::ConfigureOverheadWidgetComponent()
@@ -245,5 +263,73 @@ void APChessPiece::ConfigureOverheadWidgetComponent()
 		OverheadStatusGauge->SetValueOfHealthBar(GetCurrentHealth(), GetMaxHealth());
 	}
 	OverheadWidgetComponent->SetHiddenInGame(false);
+}
+
+void APChessPiece::UpdateHealthbar()
+{
+	if (!OverheadWidgetComponent)
+	{
+		return;
+	}
+ 
+	if (UOverheadHealthStatus* OverheadStatusGauge = Cast<UOverheadHealthStatus>(OverheadWidgetComponent->GetUserWidgetObject()))
+	{
+		OverheadStatusGauge->SetValueOfHealthBar(GetCurrentHealth(), GetMaxHealth());
+	}
+}
+
+void APChessPiece::ChangeActiveColor(bool bIsActive)
+{
+	if (HasAuthority())
+	{
+		bChangeColor = bIsActive;
+	}
+	
+	if (!StaticMeshComponent) { return; }
+	
+	if (!bIsActive)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Change Color Called"));
+		OverlayDynMaterial = UMaterialInstanceDynamic::Create(OverlayMaterial, this);
+		OverlayDynMaterial->SetVectorParameterValue(FName("OutlineColor"), OverlayColor);
+
+		StaticMeshComponent->SetOverlayMaterial(OverlayDynMaterial);
+	}
+	else
+	{
+		StaticMeshComponent->SetOverlayMaterial(nullptr);
+	}
+	
+
+}
+
+void APChessPiece::OnRep_GridPosition()
+{
+	//To Replicate any position movements
+	if (!IsValid(ChessBoardManager))
+	{
+		ChessBoardManager = Cast<AChessBoardManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AChessBoardManager::StaticClass()));
+	}
+
+	if (IsValid(ChessBoardManager))
+	{
+		//SetActorLocation(ChessBoardManager->GridToWorld(GridPosition));
+		ChessBoardManager->StartSmoothMove(this, ChessBoardManager->GridToWorld(GridPosition));
+	}
+}
+ 
+void APChessPiece::OnRep_Team()
+{
+	ChangeActiveColor(bChangeColor);
+}
+ 
+void APChessPiece::OnRep_UnitStats()
+{
+	UpdateHealthbar();
+}
+
+void APChessPiece::OnRep_ChangeColor()
+{
+	ChangeActiveColor(bChangeColor);
 }
 

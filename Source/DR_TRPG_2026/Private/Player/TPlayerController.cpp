@@ -11,4 +11,9 @@ void ATPlayerController::BeginPlay()
 	this->bEnableClickEvents = true;
 	this->bEnableMouseOverEvents = true;
 	
+	FInputModeGameAndUI InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	InputMode.SetHideCursorDuringCapture(false);
+	SetInputMode(InputMode);
+	
 }

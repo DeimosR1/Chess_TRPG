@@ -3,12 +3,13 @@
 
 #include "Player/PlayerCharacter.h"
 
-#include "INodeAndChannelMappings.h"
 #include "TPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameMode/ChessGameMode.h"
+#include "GameMode/ChessGameState.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -19,7 +20,10 @@ APlayerCharacter::APlayerCharacter()
 	SpringArmComponent->SetupAttachment(RootComponent);
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("CameraComponent");
 	CameraComponent->SetupAttachment(SpringArmComponent);
+	GetCharacterMovement()->DefaultLandMovementMode = MOVE_Flying;
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+	GetCharacterMovement()->GravityScale = 0.f;
+	GetCharacterMovement()->BrakingDecelerationFlying = 2000.f;
 
 }
 
@@ -27,18 +31,24 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (UEnhancedInputLocalPlayerSubsystem* EnhancedInputLocalPlayerSubsystem = GetController<APlayerController>()->
-		GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()) 
-	{
-		EnhancedInputLocalPlayerSubsystem->ClearAllMappings();
-		EnhancedInputLocalPlayerSubsystem->AddMappingContext(InputMappingContext, 0);
-	}
 	
 	TargetSpringArmYaw = SpringArmComponent->GetRelativeRotation().Yaw;
 	CurrentSpringArmYaw = SpringArmComponent->GetRelativeRotation().Yaw;
 	
-	GameMode = Cast<AChessGameMode>(GetWorld()->GetAuthGameMode());
+	GameState = Cast<AChessGameState>(GetWorld()->GetGameState());
+	ChessPlayerStateClass = GetPlayerState<AChessPlayerState>();
+}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	SetupPlayer();
+}
+
+void APlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	SetupPlayer();
 }
 
 // Called every frame
@@ -61,6 +71,18 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
+	if (const APlayerController* LocalPlayerController = GetController<APlayerController>())
+	{
+		if (const ULocalPlayer* LocalPlayer = LocalPlayerController->GetLocalPlayer())
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* EnhancedInputLocalPlayerSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			{
+				EnhancedInputLocalPlayerSubsystem->ClearAllMappings();
+				EnhancedInputLocalPlayerSubsystem->AddMappingContext(InputMappingContext, 0);
+			}
+		}
+	}
+	
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(PlayerMovement, ETriggerEvent::Triggered, this, &APlayerCharacter::MoveCharacter);
@@ -68,6 +90,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(CameraTurnRight, ETriggerEvent::Completed, this, &APlayerCharacter::TurnCameraRight);
 		EnhancedInputComponent->BindAction(SpringArmSizeChange, ETriggerEvent::Triggered, this, &APlayerCharacter::ChangeSpringArmSize);
 		EnhancedInputComponent->BindAction(EndTurnButton, ETriggerEvent::Completed, this, &APlayerCharacter::EndTurn);
+		EnhancedInputComponent->BindAction(DeselectButton, ETriggerEvent::Started, this, &APlayerCharacter::DeselectPiece);
+		EnhancedInputComponent->BindAction(QuitButton, ETriggerEvent::Completed, this,  &APlayerCharacter::QuitGame);
 	}
 }
 
@@ -106,9 +130,58 @@ void APlayerCharacter::ChangeSpringArmSize(const FInputActionValue& Value)
 
 void APlayerCharacter::EndTurn(const FInputActionValue& Value)
 {
-	if (IsValid(GameMode))
+	if (!IsValid(ChessPlayerStateClass))
 	{
-		GameMode->EndCurrentTurn();
+		ChessPlayerStateClass = GetPlayerState<AChessPlayerState>();
+	}
+ 
+	if (IsValid(ChessPlayerStateClass))
+	{
+		ChessPlayerStateClass->EndCurrentTurn();
+	}
+}
+
+void APlayerCharacter::DeselectPiece(const FInputActionValue& Value)
+{
+	if (!IsValid(ChessPlayerStateClass))
+	{
+		ChessPlayerStateClass = GetPlayerState<AChessPlayerState>();
+	}
+
+	if (IsValid(ChessPlayerStateClass))
+	{
+		ChessPlayerStateClass->ServerDeselectPiece();
+	}
+}
+
+void APlayerCharacter::QuitGame(const FInputActionValue& Value)
+{
+	APlayerController* PlayerController = GetController<APlayerController>();
+	if (!PlayerController || !IsLocallyControlled()) { return; }
+
+	UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, false);
+}
+
+
+void APlayerCharacter::SetupPlayer()
+{
+	ChessPlayerStateClass = GetPlayerState<AChessPlayerState>();
+	
+	if (!IsValid(ChessPlayerStateClass) || !ChessPlayerStateClass->HasSideAssigned())
+	{
+		return;
+	}
+	
+	bIsPlayerTwo = !ChessPlayerStateClass->IsPlayerLight();
+	
+	if (bIsPlayerTwo)
+	{
+		TargetSpringArmYaw = 270;
+		CurrentSpringArmYaw = 270;
+
+		FRotator Rotation = SpringArmComponent->GetRelativeRotation();
+		Rotation.Yaw = 270;
+		SpringArmComponent->SetRelativeRotation(Rotation);
 	}
 }
 

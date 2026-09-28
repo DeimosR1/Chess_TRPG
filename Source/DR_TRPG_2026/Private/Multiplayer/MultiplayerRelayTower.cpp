@@ -31,9 +31,6 @@ void AMultiplayerRelayTower::Tick(float DeltaTime)
 
 void AMultiplayerRelayTower::GetAndRelayClientSelectedPiece(APChessPiece* SelectedPiece)
 {
-	if (IsValid(ChessBoardManagerServer))
-	{
-		ChessBoardManagerServer->SelectPiece(SelectedPiece);
-	}
+	
 }
 

@@ -24,12 +24,14 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
- 
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	UPROPERTY(VisibleAnywhere, Category="Tile")
 	TObjectPtr<UStaticMeshComponent> HighlightMesh;
  
 	// Which board square this tile represents.
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	FIntPoint GridCoord;
  
 	UPROPERTY()

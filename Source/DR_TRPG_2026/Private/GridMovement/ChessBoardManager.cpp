@@ -7,12 +7,14 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "GameMode/ChessGameMode.h"
 #include "GamePieces/PChessPiece.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AChessBoardManager::AChessBoardManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 	
 	//Old Static Mesh, kept so it
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("ChessBoardModel");
@@ -51,6 +53,7 @@ void AChessBoardManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	DeltaTickSpeed = DeltaTime;
+	TickInterpolatePieceMovement(DeltaTime);
 
 }
 
@@ -79,21 +82,33 @@ void AChessBoardManager::RegisterPiece(APChessPiece* Piece, const FIntPoint& Gri
 	OccupiedSquares.Add(GridCoord, Piece);
 }
 
-void AChessBoardManager::SelectPiece(APChessPiece* Piece)
+void AChessBoardManager::SelectPiece(APChessPiece* Piece, AChessPlayerState* RequestingPlayerState)
 {
+	// Gate to check that the server is the only one doing stuff
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	if (Piece && Piece == SelectedPiece && CurrentSelectingPlayer == RequestingPlayerState)
+	{
+		DeselectPiece(RequestingPlayerState);
+		return;
+	}
+	
 	ClearSelection();
  
-	if (!Piece)
-	{
-		return;
-	}
+	if (!Piece){return;}
 	
-	if (IsValid(GameMode) && Piece->bIsPlayerTeam != GameMode->bIsPlayerTurn)
-	{
-		return;
-	}
+	if (Piece->bHasMoved){return;}
+	
+	if (IsValid(GameMode) && Piece->bIsPlayerTeam != GameMode->bIsPlayerTurn) {return;}
 	
 	SelectedPiece = Piece;
+	OnSelectedPieceChanged.Broadcast(SelectedPiece);
+	//Update the current selecting Player
+	CurrentSelectingPlayer = RequestingPlayerState;
+	
 	const TArray<FIntPoint> ValidMoves = Piece->GetValidMoves(OccupiedSquares, BoardWidth, BoardHeight);
 	SpawnHighlights(ValidMoves);
 	
@@ -106,6 +121,7 @@ void AChessBoardManager::SelectPiece(APChessPiece* Piece)
 void AChessBoardManager::ClearSelection()
 {
 	SelectedPiece = nullptr;
+	OnSelectedPieceChanged.Broadcast(nullptr);
  
 	for (ABoardGridHighlight* Tile : ActiveHighlights)
 	{
@@ -117,9 +133,22 @@ void AChessBoardManager::ClearSelection()
 	ActiveHighlights.Empty();
 }
 
-bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord)
+bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord, AChessPlayerState* RequestingPlayerState)
 {
+	// Gate to check that the server is the only one doing stuff
+	if (!HasAuthority())
+	{
+		return false;
+	}
+	
 	if (!SelectedPiece)
+	{
+		return false;
+	}
+	
+	// To check if the Player that selected the piece is the one confirming the movement, this way the opponent
+	// cannot interfere
+	if (CurrentSelectingPlayer != RequestingPlayerState)
 	{
 		return false;
 	}
@@ -140,6 +169,7 @@ bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Enemy Still alive."))
 				SelectedPiece->ChangeHasMoved(true);
+				SelectedPiece->ChangeActiveColor(true);
  
 				ClearSelection();
 	
@@ -162,9 +192,10 @@ bool AChessBoardManager::TryMoveSelectedPieceTo(const FIntPoint& TargetCoord)
 	
 	//Do a Lerp or a timeline to smoothout movement
 	
-	SelectedPiece->SetActorLocation(GridToWorld(TargetCoord));
+	StartSmoothMove(SelectedPiece, GridToWorld(TargetCoord));
 	
 	SelectedPiece->ChangeHasMoved(true);
+	SelectedPiece->ChangeActiveColor(true);
  
 	ClearSelection();
 	
@@ -213,6 +244,43 @@ void AChessBoardManager::SpawnHighlights(const TArray<FIntPoint>& ValidMoves)
 			ActiveHighlights.Add(Tile);
 		}
 	}
+}
+
+void AChessBoardManager::StartSmoothMove(APChessPiece* Piece, const FVector& TargetLocation)
+{
+	if (!IsValid(Piece))
+	{
+		return;
+	}
+
+	MovingPiece = Piece;
+	MoveStartLocation = Piece->GetActorLocation();
+	MoveTargetLocation = TargetLocation;
+	MoveElapsedTime = 0.0f;
+	bIsMovingPiece = true;
+}
+
+void AChessBoardManager::DeselectPiece(AChessPlayerState* RequestingPlayerState)
+{
+	if (!HasAuthority() || !SelectedPiece)
+	{
+		return;
+	}
+
+	// The opponent must not be able to cancel your selection
+	if (CurrentSelectingPlayer != RequestingPlayerState)
+	{
+		return;
+	}
+
+	ClearSelection();
+	CurrentSelectingPlayer = nullptr;
+}
+
+void AChessBoardManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AChessBoardManager, SelectedPiece);
 }
 
 void AChessBoardManager::GenerateBoard()
@@ -267,5 +335,41 @@ void AChessBoardManager::ClearBoard()
 	{	
 		ProceduralTileDark->ClearInstances();
 	}
+}
+
+void AChessBoardManager::TickInterpolatePieceMovement(float DeltaTime)
+{
+	if (!HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Tick Interpolate Piece works in Client"));
+	}
+	if (bIsMovingPiece)
+	{
+		if (!IsValid(MovingPiece))
+		{
+			// Piece got destroyed mid-move (e.g. captured), just stop.
+			bIsMovingPiece = false;
+			return;
+		}
+
+		MoveElapsedTime += DeltaTime;
+
+		const float Alpha = (MoveDuration > 0.0f) ? FMath::Clamp(MoveElapsedTime / MoveDuration, 0.0f, 1.0f) : 1.0f;
+		const float EasedAlpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, 2.0f);
+
+		const FVector NewLocation = FMath::Lerp(MoveStartLocation, MoveTargetLocation, EasedAlpha);
+		MovingPiece->SetActorLocation(NewLocation);
+
+		if (Alpha >= 1.0f)
+		{
+			bIsMovingPiece = false;
+			MovingPiece = nullptr;
+		}
+	}
+}
+
+void AChessBoardManager::OnRep_SelectedPiece()
+{
+	OnSelectedPieceChanged.Broadcast(SelectedPiece);
 }
 

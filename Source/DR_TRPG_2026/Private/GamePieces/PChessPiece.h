@@ -16,13 +16,13 @@ struct FUnitStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName UnitDisplayName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 UnitMaxHealth;
+	int32 UnitMaxHealth = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 UnitCurrentHealth;
+	int32 UnitCurrentHealth = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 UnitStrength;
+	int32 UnitStrength = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 UnitDefense;
+	int32 UnitDefense = 1;
 };
 
 UENUM(BlueprintType)
@@ -53,8 +53,10 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	// Which side this piece belongs to. Used to tell allies from enemies when generating moves.
-	UPROPERTY(EditAnywhere, Category="Stats")
+	UPROPERTY(EditAnywhere, ReplicatedUsing=OnRep_Team, Category="Stats")
 	bool bIsPlayerTeam = true;
  
 	// What kind of chess piece this is - drives how GetValidMoves() behaves.
@@ -62,11 +64,11 @@ public:
 	EChessPieceType PieceType = EChessPieceType::Pawn;
  
 	// This piece's current position on the logical board grid (NOT world space).
-	UPROPERTY(VisibleAnywhere, Category="Movement")
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_GridPosition, Category="Movement")
 	FIntPoint GridPosition = FIntPoint(0, 0);
  
 	// Set true once a pawn has made its first move.
-	UPROPERTY(VisibleAnywhere, Category="Movement")
+	UPROPERTY(VisibleAnywhere, Replicated, Category="Movement")
 	bool bHasMoved = false;
  
 	// Returns every square this piece could legally move to or capture into this turn,
@@ -80,7 +82,7 @@ public:
 private:
 	UPROPERTY(EditAnywhere, Category="Mesh")
 	TObjectPtr<class UStaticMeshComponent> StaticMeshComponent;
-	UPROPERTY(EditAnywhere, Category="Stats")
+	UPROPERTY(EditAnywhere, ReplicatedUsing=OnRep_UnitStats, Category="Stats")
 	FUnitStats UnitStats;
 	UPROPERTY(EditAnywhere, Category="Stats")
 	int32 UnitID;
@@ -127,10 +129,41 @@ public:
 	int32 GetMaxHealth() const {return UnitStats.UnitMaxHealth;}
 	UFUNCTION(BlueprintCallable, Category="Stats")
 	int32 GetCurrentHealth() const {return UnitStats.UnitCurrentHealth;}
+	UFUNCTION(BlueprintCallable, Category="Stats")
+	FName GetCurrentUnitDisplayName() const {return UnitStats.UnitDisplayName;}
+	
+		
+	//For Visuals
+	UPROPERTY(EditDefaultsOnly, Category="Visuals")
+	FColor OverlayColor;
+	UPROPERTY(EditDefaultsOnly, Category="Visuals")
+	UMaterial* OverlayMaterial;
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* OverlayDynMaterial;
+	UFUNCTION()
+	void ChangeActiveColor(bool bIsActive);
+	UPROPERTY(ReplicatedUsing=OnRep_ChangeColor)
+	bool bChangeColor = false; //Used For Replication Purposes
 	
 private:
 	UPROPERTY(VisibleDefaultsOnly, Category = "UI")
 	class UWidgetComponent* OverheadWidgetComponent;
 
 	void ConfigureOverheadWidgetComponent();
+	
+	UFUNCTION()
+	void UpdateHealthbar();
+	
+	// Replication Functions
+	UFUNCTION()
+	void OnRep_GridPosition();
+ 
+	UFUNCTION()
+	void OnRep_Team();
+ 
+	UFUNCTION()
+	void OnRep_UnitStats();
+	
+	UFUNCTION()
+	void OnRep_ChangeColor();
 };

@@ -5,6 +5,7 @@
 
 #include "ValueGauge.h"
 #include "Components/TextBlock.h"
+#include "Multiplayer/ChessPlayerState.h"
 
 void UUnitStatusScreen::NativeConstruct()
 {
@@ -17,7 +18,7 @@ void UUnitStatusScreen::SetValueOfHealthBar(int32 Value, int32 MaxValue)
 	HealthBar->SetValue(Value, MaxValue);
 }
 
-void UUnitStatusScreen::SetSelectedUnit(APChessPiece* Piece)
+void UUnitStatusScreen::SetSelectedUnit(APChessPiece* Piece, AChessPlayerState* RequestingPlayerState)
 {
 	if (!IsValid(Piece))
 	{
@@ -32,8 +33,13 @@ void UUnitStatusScreen::SetSelectedUnit(APChessPiece* Piece)
 	if (UnitDefense) { UnitDefense->SetText(FText::AsNumber(Piece->GetDefense())); }
 
 	SetValueOfHealthBar(Piece->GetCurrentHealth(), Piece->GetMaxHealth());
+	
 
-	SetVisibility(ESlateVisibility::Visible);
+	if (RequestingPlayerState && GetOwningPlayerState() == RequestingPlayerState)
+	{
+		SetVisibility(ESlateVisibility::Visible);
+	}
+	
 }
 
 void UUnitStatusScreen::ClearSelectedUnit()

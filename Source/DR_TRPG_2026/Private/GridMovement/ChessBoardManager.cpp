@@ -105,7 +105,7 @@ void AChessBoardManager::SelectPiece(APChessPiece* Piece, AChessPlayerState* Req
 	if (IsValid(GameMode) && Piece->bIsPlayerTeam != GameMode->bIsPlayerTurn) {return;}
 	
 	SelectedPiece = Piece;
-	OnSelectedPieceChanged.Broadcast(SelectedPiece);
+	OnSelectedPieceChanged.Broadcast(SelectedPiece, CurrentSelectingPlayer);
 	//Update the current selecting Player
 	CurrentSelectingPlayer = RequestingPlayerState;
 	
@@ -121,7 +121,7 @@ void AChessBoardManager::SelectPiece(APChessPiece* Piece, AChessPlayerState* Req
 void AChessBoardManager::ClearSelection()
 {
 	SelectedPiece = nullptr;
-	OnSelectedPieceChanged.Broadcast(nullptr);
+	OnSelectedPieceChanged.Broadcast(nullptr, nullptr);
  
 	for (ABoardGridHighlight* Tile : ActiveHighlights)
 	{
@@ -370,6 +370,6 @@ void AChessBoardManager::TickInterpolatePieceMovement(float DeltaTime)
 
 void AChessBoardManager::OnRep_SelectedPiece()
 {
-	OnSelectedPieceChanged.Broadcast(SelectedPiece);
+	OnSelectedPieceChanged.Broadcast(SelectedPiece, CurrentSelectingPlayer);
 }
 

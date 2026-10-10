@@ -7,6 +7,7 @@
 #include "GamePieces/PChessPiece.h"
 #include "UnitStatusScreen.generated.h"
 
+class ATPlayerController;
 /**
  * 
  */
@@ -19,7 +20,7 @@ public:
 	UFUNCTION()
 	void SetValueOfHealthBar(int32 Value, int32 MaxValue);
 	UFUNCTION(BlueprintCallable)
-	void SetSelectedUnit(APChessPiece* Piece);
+	void SetSelectedUnit(APChessPiece* Piece, AChessPlayerState* RequestingPlayerState);
 
 	UFUNCTION(BlueprintCallable)
 	void ClearSelectedUnit();

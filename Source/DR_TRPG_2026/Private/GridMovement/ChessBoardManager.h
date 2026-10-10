@@ -11,7 +11,7 @@ class AChessGameMode;
 class APChessPiece;
 class ABoardGridHighlight;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSelectedPieceChanged, APChessPiece*, NewSelectedPiece);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSelectedPieceChanged, APChessPiece*, NewSelectedPiece, AChessPlayerState*, RequestingPlayerState);
 
 UCLASS()
 class AChessBoardManager : public AActor

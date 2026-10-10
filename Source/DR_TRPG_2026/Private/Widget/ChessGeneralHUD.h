@@ -31,7 +31,8 @@ private:
 	TObjectPtr<class AChessGameState> ChessGameState;
 
 	UFUNCTION()
-	void HandleSelectedPieceChanged(class APChessPiece* NewSelectedPiece);
+	void HandleSelectedPieceChanged(class APChessPiece* NewSelectedPiece, class AChessPlayerState* RequestingPlayerState );
+	
 
 	UFUNCTION()
 	void HandleTurnChanged(bool bNewIsPlayerTurn);

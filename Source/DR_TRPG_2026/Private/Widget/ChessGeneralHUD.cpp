@@ -31,13 +31,13 @@ void UChessGeneralHUD::NativeConstruct()
 	}
 }
 
-void UChessGeneralHUD::HandleSelectedPieceChanged(APChessPiece* NewSelectedPiece)
+void UChessGeneralHUD::HandleSelectedPieceChanged(APChessPiece* NewSelectedPiece, AChessPlayerState* RequestingPlayerState)
 {
 	if (!UnitStatusScreen) return;
 
 	if (IsValid(NewSelectedPiece))
 	{
-		UnitStatusScreen->SetSelectedUnit(NewSelectedPiece);
+		UnitStatusScreen->SetSelectedUnit(NewSelectedPiece, RequestingPlayerState);
 	}
 	else
 	{

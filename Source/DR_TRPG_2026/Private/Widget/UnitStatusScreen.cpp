@@ -35,11 +35,11 @@ void UUnitStatusScreen::SetSelectedUnit(APChessPiece* Piece, AChessPlayerState* 
 	SetValueOfHealthBar(Piece->GetCurrentHealth(), Piece->GetMaxHealth());
 	
 
-	if (RequestingPlayerState && GetOwningPlayerState() == RequestingPlayerState)
+	if (RequestingPlayerState)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("The Owner of this Widget is %s"), *GetOwningPlayerState<AChessPlayerState>()->GetName());
 		SetVisibility(ESlateVisibility::Visible);
 	}
-	
 }
 
 void UUnitStatusScreen::ClearSelectedUnit()

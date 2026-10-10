@@ -341,7 +341,7 @@ void AChessBoardManager::TickInterpolatePieceMovement(float DeltaTime)
 {
 	if (!HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Tick Interpolate Piece works in Client"));
+		//UE_LOG(LogTemp, Warning, TEXT("Tick Interpolate Piece works in Client"));
 	}
 	if (bIsMovingPiece)
 	{

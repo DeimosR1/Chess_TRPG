@@ -14,12 +14,18 @@ class UJoinServerUI : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	
 private:
 	UPROPERTY(meta=(BindWidget))
-	class UButton* JoinButton;
-	UPROPERTY(meta=(BindWidget))
-	class UEditableTextBox* IPAdressInput;
+	class UButton* SearchButton;
+	
+	UFUNCTION()
+	void SearchForServers();
+	
+	//Holds the Multiplayer Logic
+	UPROPERTY(EditDefaultsOnly)
+	class UMultiplayerGameLogicHandler* MultiplayerJoiningHandler;
 	
 };

@@ -9,6 +9,8 @@
 /**
  * 
  */
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnLevelSelected, class ULevelSelectWidget*);
+
 UCLASS()
 class ULevelSelectWidget : public UUserWidget
 {
@@ -17,18 +19,27 @@ class ULevelSelectWidget : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 	
-	//Properties that hold the chosen Level
-	UPROPERTY(EditDefaultsOnly)
-	UWorld* HeldLevel;
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Level")
+	TSoftObjectPtr<UWorld> HeldLevel;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Level")
+	FText Description;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Level")
+	TObjectPtr<UTexture2D> Icon;
+
+	FString GetLevelPath() const { return HeldLevel.ToSoftObjectPath().GetLongPackageName(); }
+
+	FOnLevelSelected OnLevelSelected;
+
 private:
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget)) 
 	class UButton* SelectButton;
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget)) 
 	class UTextBlock* LevelName;
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget)) 
 	class UTextBlock* LevelDescription;
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget)) 
 	class UImage* LevelIcon;
+
+	UFUNCTION() void OnHandleClicked();
 	
 };

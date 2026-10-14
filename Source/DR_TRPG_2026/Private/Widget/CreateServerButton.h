@@ -20,7 +20,9 @@ public:
 	
 	//Properties that hold the chosen Level
 	UPROPERTY(EditDefaultsOnly)
-	UWorld* SelectedLevel;
+	FString LevelPath;
+	UPROPERTY(EditDefaultsOnly)
+	FName ServerName;
 	
 private:
 	UPROPERTY(meta=(BindWidget))

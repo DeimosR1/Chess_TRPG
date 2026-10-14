@@ -3,11 +3,22 @@
 
 #include "Widget/LevelSelectWidget.h"
 
+#include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 
 void ULevelSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	LevelName->SetText(FText::FromString(HeldLevel.GetAssetName()));
+	LevelDescription->SetText(Description);
 	
-	if (LevelName) {LevelName->SetText(FText::FromString(HeldLevel->GetName()));}
+	if (Icon) { LevelIcon->SetBrushFromTexture(Icon); }
+	
+	SelectButton->OnClicked.AddDynamic(this, &ULevelSelectWidget::OnHandleClicked);
+}
+
+void ULevelSelectWidget::OnHandleClicked()
+{
+	OnLevelSelected.Broadcast(this);
 }

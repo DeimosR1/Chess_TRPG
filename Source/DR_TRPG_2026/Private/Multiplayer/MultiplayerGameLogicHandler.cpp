@@ -58,8 +58,8 @@ void UMultiplayerGameLogicHandler::CreateServerAsListener(const FString& ServerN
 {
 	if (!SessionInterface) {return;}
  
-	FString PendingServerName = ServerName;
-	FString PendingLevelPath = LevelPath;
+	PendingServerName = ServerName;
+	PendingLevelPath = LevelPath;
  
 	// Only one session of a given name can exist, so remove any old one first
 	if (SessionInterface->GetNamedSession(NAME_GameSession))

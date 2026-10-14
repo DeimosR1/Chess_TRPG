@@ -3,13 +3,16 @@
 
 #include "Widget/CreateServerButton.h"
 
+#include "Components/Button.h"
+
 void UCreateServerButton::NativeConstruct()
 {
 	Super::NativeConstruct();
+	ConfirmButton->OnClicked.AddDynamic(this, &UCreateServerButton::ConfirmButtonClicked);
+	MultiplayerJoiningHandler = GetGameInstance()->GetSubsystem<UMultiplayerGameLogicHandler>();
 }
 
 void UCreateServerButton::ConfirmButtonClicked()
 {
-	MultiplayerJoiningHandler->SetLevelName(FName(SelectedLevel->GetName()));
-	MultiplayerJoiningHandler->CreateServerAsListener(GetWorld());
+	MultiplayerJoiningHandler->CreateServerAsListener(ServerName.ToString(), LevelPath);
 }

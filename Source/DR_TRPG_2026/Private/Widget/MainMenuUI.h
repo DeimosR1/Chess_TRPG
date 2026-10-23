@@ -21,4 +21,15 @@ private:
 	class UButton* JoinServerUIActivateButton;
 	UPROPERTY(meta=(BindWidget))
 	class UCreateServerMainMenuButton* CreateServerMainMenuButton;
+	UPROPERTY(meta=(BindWidget))
+	class UCreateServerUI* CreateServerUI;
+	UPROPERTY(meta=(BindWidget))
+	class UJoinServerUI* JoinServerUI;
+	
+	UFUNCTION()
+	void OnJoinServerUIActivateButtonClicked();
+	
+public:
+	UFUNCTION()
+	void OnCreateServerUIActivateButtonClicked();
 };

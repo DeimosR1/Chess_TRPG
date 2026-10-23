@@ -10,4 +10,5 @@ void UCreateServerMainMenuButton::NativeConstruct()
 
 void UCreateServerMainMenuButton::OnCreateServerMainMenuButtonClicked()
 {
+	OnClickedCreate.Broadcast();
 }

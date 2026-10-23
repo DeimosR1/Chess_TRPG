@@ -44,6 +44,9 @@ public:
 	FString GetFoundSessionsName(int32 Index) const;
  
 	FOnServersFoundNative OnServersFound;
+	
+	UPROPERTY()
+	bool bIsFriendsOnly = true;
  
 private:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
@@ -67,4 +70,6 @@ private:
 	FString PendingServerName;
 	FString PendingLevelPath;
 	bool bCreateAfterDestroy = false;
+	
+	IOnlineSessionPtr GetSessionInterface();
 };

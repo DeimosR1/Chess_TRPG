@@ -7,6 +7,15 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 
+void ULevelSelectWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+	LevelName->SetText(FText::FromString(HeldLevel.GetAssetName()));
+	LevelDescription->SetText(Description);
+	
+	if (Icon) { LevelIcon->SetBrushFromTexture(Icon); }
+}
+
 void ULevelSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();

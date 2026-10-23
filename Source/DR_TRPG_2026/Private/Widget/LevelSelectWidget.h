@@ -9,7 +9,7 @@
 /**
  * 
  */
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnLevelSelected, class ULevelSelectWidget*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLevelSelected, class ULevelSelectWidget*, LevelSelectWidget);
 
 UCLASS()
 class ULevelSelectWidget : public UUserWidget
@@ -17,6 +17,7 @@ class ULevelSelectWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Level")

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "CreateServerMainMenuButton.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCreateServerMainMenuButtonClicked);
 /**
  * 
  */
@@ -22,4 +23,7 @@ private:
 	
 	UFUNCTION()
 	void OnCreateServerMainMenuButtonClicked();
+	
+public:
+	FOnCreateServerMainMenuButtonClicked OnClickedCreate;
 };

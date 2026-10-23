@@ -6,22 +6,18 @@
 #include "OnlineSubsystemUtils.h"
 #include "Online/OnlineSessionNames.h"
 
-
+//Look Into transfering Server to preserve the instances when other player disconnects
+//Online Identity interface to get player name on the turn change
 static const FName SERVER_NAME_KEY(TEXT("ServerName"));
  
 void UMultiplayerGameLogicHandler::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
- 
-	if (IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld()))
-	{
-		SessionInterface = Subsystem->GetSessionInterface();
-	}
 }
  
 void UMultiplayerGameLogicHandler::Deinitialize()
 {
-	if (SessionInterface)
+	if (GetSessionInterface())
 	{
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
 		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
@@ -53,10 +49,19 @@ FUniqueNetIdPtr UMultiplayerGameLogicHandler::GetLocalNetId() const
 	return nullptr;
 }
 
- 
+IOnlineSessionPtr UMultiplayerGameLogicHandler::GetSessionInterface()
+{
+	if (IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld()))
+	{
+		SessionInterface = Subsystem->GetSessionInterface();
+	}
+	return SessionInterface;
+}
+
+
 void UMultiplayerGameLogicHandler::CreateServerAsListener(const FString& ServerName, const FString& LevelPath)
 {
-	if (!SessionInterface) {return;}
+	if (!GetSessionInterface()) {return;}
  
 	PendingServerName = ServerName;
 	PendingLevelPath = LevelPath;
@@ -86,15 +91,15 @@ void UMultiplayerGameLogicHandler::CreateSessionInternal()
 	Settings.bIsLANMatch = IsLan();
 	Settings.NumPublicConnections = 2; //This is an exclusively Two Player Game, we don't need more.
 	Settings.bShouldAdvertise = true;
-	Settings.bAllowJoinInProgress = true;
+	Settings.bAllowJoinInProgress = true; //Look into Starting Session through UI for Host
 	Settings.bAllowJoinViaPresence = true;
 	Settings.bUsesPresence = true;          // Required for Steam sessions to show up in searches
 	Settings.bUseLobbiesIfAvailable = true; // Steam lobbies
-	Settings.bAllowJoinViaPresenceFriendsOnly = true;  // Steam lobby type "Friends Only"
+	Settings.bAllowJoinViaPresenceFriendsOnly = bIsFriendsOnly;  // Steam lobby type "Friends Only"
 	Settings.bAllowInvites = true;
 	Settings.Set(SERVER_NAME_KEY, PendingServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
  
-	CreateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(FOnCreateSessionCompleteDelegate::CreateUObject(this, &UMultiplayerGameLogicHandler::OnCreateSessionComplete));
+	CreateHandle = GetSessionInterface()->AddOnCreateSessionCompleteDelegate_Handle(FOnCreateSessionCompleteDelegate::CreateUObject(this, &UMultiplayerGameLogicHandler::OnCreateSessionComplete));
  
 	if (!SessionInterface->CreateSession(*NetId, NAME_GameSession, Settings))
 	{
@@ -105,7 +110,7 @@ void UMultiplayerGameLogicHandler::CreateSessionInternal()
  
 void UMultiplayerGameLogicHandler::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
+	GetSessionInterface()->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
 	if (bCreateAfterDestroy)
 	{
 		bCreateAfterDestroy = false;
@@ -115,7 +120,7 @@ void UMultiplayerGameLogicHandler::OnDestroySessionComplete(FName SessionName, b
  
 void UMultiplayerGameLogicHandler::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
+	GetSessionInterface()->ClearOnCreateSessionCompleteDelegate_Handle(CreateHandle);
  
 	if (!bWasSuccessful)
 	{
@@ -132,7 +137,7 @@ void UMultiplayerGameLogicHandler::OnCreateSessionComplete(FName SessionName, bo
  
 void UMultiplayerGameLogicHandler::FindGameSessions()
 {
-	if (!SessionInterface) { OnServersFound.Broadcast(false); return; }
+	if (!GetSessionInterface()) { OnServersFound.Broadcast(false); return; }
 
 	IOnlineFriendsPtr Friends = Online::GetSubsystem(GetWorld())->GetFriendsInterface();
 	if (!Friends.IsValid()) { OnServersFound.Broadcast(false); return; }
@@ -147,7 +152,7 @@ void UMultiplayerGameLogicHandler::FindGameSessions()
 
 void UMultiplayerGameLogicHandler::StartGameSessionSearch()
 {
-	if (!SessionInterface) { OnServersFound.Broadcast(false); return; }
+	if (!GetSessionInterface()) { OnServersFound.Broadcast(false); return; }
  
 	FUniqueNetIdPtr NetId = GetLocalNetId();
 	if (!NetId.IsValid()) { OnServersFound.Broadcast(false); return; }
@@ -169,11 +174,11 @@ void UMultiplayerGameLogicHandler::StartGameSessionSearch()
 
 void UMultiplayerGameLogicHandler::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
+	GetSessionInterface()->ClearOnFindSessionsCompleteDelegate_Handle(FindHandle);
 
 	if (bWasSuccessful && SearchSettings.IsValid())
 	{
-		IOnlineFriendsPtr Friends = IOnlineSubsystem::Get()->GetFriendsInterface();
+		IOnlineFriendsPtr Friends = Online::GetSubsystem(GetWorld())->GetFriendsInterface();
 		const FString ListName = EFriendsLists::ToString(EFriendsLists::Default);
 
 		SearchSettings->SearchResults.RemoveAll(

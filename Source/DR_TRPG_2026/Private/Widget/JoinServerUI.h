@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Blueprint/IUserObjectListEntry.h"
 #include "Blueprint/UserWidget.h"
 #include "JoinServerUI.generated.h"
 
+class UServerListSegment;
 /**
  * 
  */
@@ -18,14 +20,25 @@ public:
 	virtual void NativeConstruct() override;
 	
 private:
+	UPROPERTY(EditAnywhere, Category="ServerSelect")
+	TSubclassOf<UServerListSegment> ServerListItemBase;
+	
 	UPROPERTY(meta=(BindWidget))
 	class UButton* SearchButton;
+	UPROPERTY(meta=(BindWidget)) 
+	class UScrollBox* ServerListScrollBox;
+	UPROPERTY(meta=(BindWidget))
+	class UButton* BackButton;
 	
 	UFUNCTION()
 	void SearchForServers();
+	UFUNCTION()
+	void BackButtonClicked();
+	UFUNCTION()
+	void OnServersFound(bool bSuccess);
 	
 	//Holds the Multiplayer Logic
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY()
 	class UMultiplayerGameLogicHandler* MultiplayerJoiningHandler;
 	
 };

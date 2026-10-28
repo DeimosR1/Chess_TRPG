@@ -23,12 +23,19 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	class UTurnStatusChangeWidget* TurnStatusChangeWidget;
+	
+	UPROPERTY(meta=(BindWidget))
+	class UBackToMainMenuWidget* BackToMainMenuWidget;
 
 private:
 	UPROPERTY()
 	TObjectPtr<class AChessBoardManager> ChessBoardManager;
 	UPROPERTY()
 	TObjectPtr<class AChessGameState> ChessGameState;
+	
+	//Keep just in case
+	UPROPERTY()
+	bool bBackIsActive = false;
 
 	UFUNCTION()
 	void HandleSelectedPieceChanged(class APChessPiece* NewSelectedPiece, class AChessPlayerState* RequestingPlayerState );
@@ -36,4 +43,7 @@ private:
 
 	UFUNCTION()
 	void HandleTurnChanged(bool bNewIsPlayerTurn);
+	
+	UFUNCTION()
+	void ShowBackToMainMenuMenu();
 };

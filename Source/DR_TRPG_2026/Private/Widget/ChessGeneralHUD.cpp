@@ -3,11 +3,13 @@
 
 #include "Widget/ChessGeneralHUD.h"
 
+#include "BackToMainMenuWidget.h"
 #include "TurnStatusChangeWidget.h"
 #include "UnitStatusScreen.h"
 #include "GameMode/ChessGameState.h"
 #include "GridMovement/ChessBoardManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/PlayerCharacter.h"
 
 void UChessGeneralHUD::NativeConstruct()
 {
@@ -28,6 +30,23 @@ void UChessGeneralHUD::NativeConstruct()
 	if (ChessGameState)
 	{
 		ChessGameState->OnTurnChangedDelegate.AddDynamic(this, &UChessGeneralHUD::HandleTurnChanged);
+	}
+	
+	APawn* LocalPawn = nullptr;
+	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+	{
+		if (APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld()))
+		{
+			LocalPawn = PlayerController->GetPawn();
+			if (LocalPawn)
+			{
+				APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(LocalPawn);
+				if (PlayerCharacter)
+				{
+					PlayerCharacter->OnQuitGamePressed.AddDynamic(this, &UChessGeneralHUD::ShowBackToMainMenuMenu);
+				}
+			}
+		}
 	}
 }
 
@@ -51,4 +70,9 @@ void UChessGeneralHUD::HandleTurnChanged(bool bNewIsPlayerTurn)
 	{
 		TurnStatusChangeWidget->PlayTurnChangeNotice(bNewIsPlayerTurn);
 	}
+}
+
+void UChessGeneralHUD::ShowBackToMainMenuMenu()
+{
+	BackToMainMenuWidget->SetVisibility(ESlateVisibility::Visible);
 }

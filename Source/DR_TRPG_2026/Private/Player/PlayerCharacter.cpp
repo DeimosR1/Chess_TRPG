@@ -156,10 +156,12 @@ void APlayerCharacter::DeselectPiece(const FInputActionValue& Value)
 
 void APlayerCharacter::QuitGame(const FInputActionValue& Value)
 {
-	APlayerController* PlayerController = GetController<APlayerController>();
+	/*APlayerController* PlayerController = GetController<APlayerController>();
 	if (!PlayerController || !IsLocallyControlled()) { return; }
 
-	UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, false);
+	UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, false);*/
+	
+	OnQuitGamePressed.Broadcast();
 }
 
 

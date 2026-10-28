@@ -13,7 +13,7 @@ void AMainMenuPlayerController::BeginPlay()
 	this->bEnableClickEvents = true;
 	this->bEnableMouseOverEvents = true;
 	
-	FInputModeUIOnly InputMode;
+	FInputModeGameAndUI InputMode;
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(InputMode);
 	

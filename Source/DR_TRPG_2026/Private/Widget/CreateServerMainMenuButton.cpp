@@ -3,12 +3,16 @@
 
 #include "Widget/CreateServerMainMenuButton.h"
 
+#include "Components/Button.h"
+
 void UCreateServerMainMenuButton::NativeConstruct()
 {
 	Super::NativeConstruct();
+	CreateServerMainMenuButton->OnClicked.AddDynamic(this, &UCreateServerMainMenuButton::OnCreateServerMainMenuButtonClicked);
 }
 
 void UCreateServerMainMenuButton::OnCreateServerMainMenuButtonClicked()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Create Clicked"))
 	OnClickedCreate.Broadcast();
 }

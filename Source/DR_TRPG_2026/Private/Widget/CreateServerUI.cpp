@@ -22,6 +22,7 @@ void UCreateServerUI::NativeConstruct()
 	}
 	
 	if (ServerNameTextBox){ServerNameTextBox->OnTextChanged.AddDynamic(this, &UCreateServerUI::OnTextChanged);}
+	CreateServerButton->SetIsEnabled(false);
 }
 
 void UCreateServerUI::NativePreConstruct()
@@ -49,6 +50,7 @@ void UCreateServerUI::OnBackPressed()
 void UCreateServerUI::LevelSelectedHandler(ULevelSelectWidget* LevelSelectWidget)
 {
 	CreateServerButton->LevelPath = LevelSelectWidget->GetLevelPath();
+	CreateServerButton->SetIsEnabled(true);
 }
 
 void UCreateServerUI::OnTextChanged(const FText& ServerName)

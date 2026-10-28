@@ -11,6 +11,7 @@
 #include "Multiplayer/ChessPlayerState.h"
 #include "PlayerCharacter.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnQuitGamePressedDelegate);
 UCLASS()
 class APlayerCharacter : public ACharacter
 {
@@ -103,5 +104,7 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	void SetupPlayer();
+	
+	FOnQuitGamePressedDelegate OnQuitGamePressed;
 	
 };

@@ -10,6 +10,14 @@
 #include "OnlineSessionSettings.h"
 #include "MultiplayerGameLogicHandler.generated.h"
 
+UENUM()
+enum class EPendingSessionAction : uint8
+{
+	None,
+	CreateSession,
+	LeaveToMenu,
+	JoinInvite
+};
 
 // This is a Script that will hold all the Joining and Creating Level ata neccesarry for the system to open and close the game levels
 
@@ -18,7 +26,9 @@
  */
 
 // Broadcast when a server search finishes. UI can bind to this and read the results.
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnServersFoundNative, bool);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnServersFoundNative, bool, bHasFound);
+//static const FName GAME_KEY(TEXT("TacticalChessGamekey"));
+//static const FString GAME_KEY_VALUE(TEXT("TacticalChest_v1"));
 
 UCLASS()
 class UMultiplayerGameLogicHandler : public UGameInstanceSubsystem
@@ -46,7 +56,10 @@ public:
 	FOnServersFoundNative OnServersFound;
 	
 	UPROPERTY()
-	bool bIsFriendsOnly = true;
+	bool bIsFriendsOnly = false;
+	
+	UFUNCTION()
+	void LeaveGameAndReturnToMenu();
  
 private:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
@@ -69,7 +82,29 @@ private:
 	// Stored while we wait for an old session to be destroyed
 	FString PendingServerName;
 	FString PendingLevelPath;
-	bool bCreateAfterDestroy = false;
 	
 	IOnlineSessionPtr GetSessionInterface();
+	
+	UPROPERTY()
+	bool bIsLeaving = false;
+	EPendingSessionAction PendingAction = EPendingSessionAction::None;
+	
+	UPROPERTY(EditDefaultsOnly)
+	UWorld* MainMenu;
+	
+	UFUNCTION()
+	void OpenMainMenuLevel();
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
+	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString);
+	
+	FDelegateHandle OnNetworkFailureHandle;
+	FDelegateHandle OnTravelFailureHandle;
+	
+	void OnSessionUserInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
+	FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
+	void JoinSessionFromResult(const FOnlineSessionSearchResult& Result);
+
+	FDelegateHandle OnInviteAcceptedHandle;
+	FOnlineSessionSearchResult OnPendingInviteResult;
+	
 };

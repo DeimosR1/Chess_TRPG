@@ -8,6 +8,7 @@
 #include "GridMovement/ChessBoardManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Multiplayer/ChessPlayerState.h"
+#include "Multiplayer/MultiplayerGameLogicHandler.h"
 
 void AChessGameMode::BeginPlay()
 {
@@ -28,7 +29,13 @@ void AChessGameMode::CheckIfTurnChange()
 	if (PlayerUnits.Num() <= 0 || PlayerTwoUnits.Num() <= 0)
 	{
 		//Temporary
-		UKismetSystemLibrary::QuitGame(GetWorld(), UGameplayStatics::GetPlayerController(this, 0), EQuitPreference::Quit,false);
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UMultiplayerGameLogicHandler* LogicHandler = GameInstance->GetSubsystem<UMultiplayerGameLogicHandler>())
+			{
+				LogicHandler->LeaveGameAndReturnToMenu();
+			}
+		}
 		return;
 	}
 	
@@ -166,6 +173,14 @@ void AChessGameMode::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 	//Temporary
 	UE_LOG(LogTemp, Warning, TEXT("Logged Out"));
+	
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UMultiplayerGameLogicHandler* LogicHandler = GameInstance->GetSubsystem<UMultiplayerGameLogicHandler>())
+		{
+			LogicHandler->LeaveGameAndReturnToMenu();
+		}
+	}
 }
 
 void AChessGameMode::AllowUnitsToMoveAgain()
